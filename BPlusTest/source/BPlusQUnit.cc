@@ -159,7 +159,9 @@ int main (int argc, char *argv[]) {
 		MyDB_StringAttValPtr high = make_shared <MyDB_StringAttVal> ();
 		high->set ("slyly ironic~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
+		cout<<"Finding record with comment = 'slyly ironic' and suppkey = 4171\n";
 		myIter = supplierTable.getRangeIteratorAlt (low, high);
+		cout<<"Found records are:\n";
 		int counter = 0;
 		bool foundIt = false;
 		while (myIter->advance ()) {

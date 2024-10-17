@@ -25,81 +25,69 @@ MyDB_BPlusTreeReaderWriter :: MyDB_BPlusTreeReaderWriter (string orderOnAttName,
 }
 
 MyDB_RecordIteratorAltPtr MyDB_BPlusTreeReaderWriter :: getSortedRangeIteratorAlt (MyDB_AttValPtr low, MyDB_AttValPtr high) {
-	return nullptr;
+	vector<MyDB_PageReaderWriter> list;
+    discoverPages(rootLocation, list, low, high);
+	MyDB_RecordPtr lhs = getEmptyRecord();
+	MyDB_INRecordPtr lowInBoundary = getINRecord();
+	MyDB_INRecordPtr highInBoundary = getINRecord();
+	MyDB_RecordPtr rhs = getEmptyRecord();
+	MyDB_RecordPtr curRec = getEmptyRecord();
+	lowInBoundary->setKey(low);
+	highInBoundary->setKey(high);
+	function<bool()> lowComparator = buildComparator(lowInBoundary, getINRecord());
+	function<bool()> highComparator = buildComparator(getINRecord(), highInBoundary);
+	function<bool()> curComparator = buildComparator(lhs, rhs);
+	return make_shared<MyDB_PageListIteratorSelfSortingAlt>(list, lhs, rhs, curComparator, curRec, 
+		lowComparator, highComparator, true);
 }
 
 MyDB_RecordIteratorAltPtr MyDB_BPlusTreeReaderWriter :: getRangeIteratorAlt(MyDB_AttValPtr low, MyDB_AttValPtr high) {
     // Use discoverPages to find the relevant pages
     vector<MyDB_PageReaderWriter> list;
     discoverPages(rootLocation, list, low, high);
-	if(list.size() > 0) {
-		return ::getIteratorAlt(list);
-	}
+	MyDB_RecordPtr lhs = getEmptyRecord();
+	MyDB_INRecordPtr lowInBoundary = getINRecord();
+	MyDB_INRecordPtr highInBoundary = getINRecord();
+	MyDB_RecordPtr rhs = getEmptyRecord();
+	MyDB_RecordPtr curRec = getEmptyRecord();
+	lowInBoundary->setKey(low);
+	highInBoundary->setKey(high);
+	function<bool()> lowComparator = buildComparator(lowInBoundary, getINRecord());
+	function<bool()> highComparator = buildComparator(getINRecord(), highInBoundary);
+	function<bool()> curComparator = buildComparator(lhs, rhs);
+	return make_shared<MyDB_PageListIteratorSelfSortingAlt>(list, lhs, rhs, curComparator, curRec, 
+		lowComparator, highComparator, false);
 }
 
 
 bool MyDB_BPlusTreeReaderWriter :: discoverPages (int whichPage, vector <MyDB_PageReaderWriter> &list, MyDB_AttValPtr low, MyDB_AttValPtr high) {
 	MyDB_PageReaderWriter currentPage = (*this)[whichPage];
-	MyDB_RecordPtr lhs = getEmptyRecord(), rhs = getEmptyRecord();
-	if(currentPage.getType() == MyDB_PageType :: RegularPage) {
-		// If the page is a leaf, check if it contains any values within the range
-		if (low == nullptr && high == nullptr) {
-			list.push_back(currentPage);
-			return true;
-		} else {
-			MyDB_RecordIteratorPtr iter = currentPage.getIterator(lhs);
-
-			MyDB_RecordPtr tempHighRecord = getEmptyRecord();
-			MyDB_RecordPtr tempLowRecord = getEmptyRecord();
-
-			if(low != nullptr) {
-				tempLowRecord->getAtt(whichAttIsOrdering)->set(low);
-			}
-			if(high != nullptr) {
-				tempHighRecord->getAtt(whichAttIsOrdering)->set(high);
-			}
-
-			while (iter->hasNext()) {
-				iter->getNext();
-
-				bool inLowRange = (low == nullptr || buildComparator(lhs, tempLowRecord)());
-				bool inHighRange = (high == nullptr || buildComparator(lhs, tempHighRecord)());
-
-				if(inLowRange && inHighRange) {
-					list.push_back(currentPage);
-					return true;
-				}
-			}
-		}
+	bool biggerThanLow = false;
+	if (currentPage.getType() == MyDB_PageType :: RegularPage) {
+		list.push_back(currentPage);
+		return true;
 	} else if (currentPage.getType() == MyDB_PageType :: DirectoryPage) {
-		MyDB_RecordIteratorPtr iter = currentPage.getIterator(lhs);
+		MyDB_INRecordPtr curRec = getINRecord();
 
-		MyDB_RecordPtr tempLowRecord = getEmptyRecord();
-		MyDB_RecordPtr tempHighRecord = getEmptyRecord();
+		MyDB_RecordIteratorAltPtr iter = currentPage.getIteratorAlt();
+		MyDB_INRecordPtr lowInBoundary = getINRecord();
+        MyDB_INRecordPtr highInBoundary = getINRecord();
+		
+		lowInBoundary->setKey(low);
+		highInBoundary->setKey(high);
 
-		if(low != nullptr) {
-			tempLowRecord->getAtt(whichAttIsOrdering)->set(low);
-		}
-		if(high != nullptr) {
-			tempHighRecord->getAtt(whichAttIsOrdering)->set(high);
-		}
+		function<bool()> lowComparator = buildComparator(lowInBoundary, curRec);
+		function<bool()> highComparator = buildComparator(highInBoundary, curRec);
 
-		while(iter->hasNext()) {
-			iter->getNext();
-
-			MyDB_INRecordPtr inRecord = std::static_pointer_cast<MyDB_INRecord>(lhs);
-
-			if(inRecord == nullptr) {
-				cout<<"Error: Record is not an internal record"<<endl;
-				continue;
+		while(iter->advance()) {
+			iter->getCurrent(curRec);
+			if(lowComparator() && !highComparator()) {
+				discoverPages(curRec->getPtr(), list, low, high);
+			} else if (highComparator()) {
+				break;
 			}
-			bool childInLowRange = (low == nullptr || buildComparator(inRecord, tempLowRecord)());
-            bool childInHighRange = (high == nullptr || !buildComparator(tempHighRecord, inRecord)());
-
-			if (childInLowRange && childInHighRange) {
-                discoverPages(inRecord->getPtr(), list, low, high);
-            }
 		}
+		return false;
 	}
 	return false;
 }
