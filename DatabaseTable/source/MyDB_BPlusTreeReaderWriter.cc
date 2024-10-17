@@ -83,7 +83,7 @@ void MyDB_BPlusTreeReaderWriter :: append (MyDB_RecordPtr appendMe) {
 			rootLocation = getTable()->getRootLocation();
 		}
 	}
-	// printTree();
+	printTree();
 }
 
 MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter splitMe, MyDB_RecordPtr andMe) {
@@ -185,6 +185,7 @@ MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: append (int whichPage, MyDB_RecordP
 					MyDB_RecordPtr splitedInRecord = split(curPageNode, appendedInRecord);
 					return splitedInRecord;
 				}
+				break;
 			}
 		}
 	}
