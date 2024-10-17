@@ -38,9 +38,8 @@ bool MyDB_BPlusTreeReaderWriter :: discoverPages (int curPageNode, vector <MyDB_
 }
 
 void MyDB_BPlusTreeReaderWriter :: append (MyDB_RecordPtr appendMe) {
-	// cout << "append here\n";
-	// cout << rootLocation << "-" << (*this)[rootLocation].getType() << endl;
 	if (rootLocation == -1) {
+		// tree is currently empty, need to be initialized
 		int rootPageId = getTable()->lastPage();
 		int leafPageId = rootPageId + 1;
 		getTable()->setLastPage(leafPageId);
@@ -84,10 +83,10 @@ void MyDB_BPlusTreeReaderWriter :: append (MyDB_RecordPtr appendMe) {
 			rootLocation = getTable()->getRootLocation();
 		}
 	}
-	printTree();
+	// printTree();
 }
 
-MyDB_INRecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter splitMe, MyDB_RecordPtr andMe) {
+MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter splitMe, MyDB_RecordPtr andMe) {
 	if(splitMe.append(andMe)) {
 		return nullptr;
 	}
@@ -133,10 +132,11 @@ MyDB_INRecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter spli
 		tempLargerPage.append(tempRec);
 	}
 	
+	int curPageType = splitMe.getType();
 	splitMe.clear();
-	if (splitMe.getType() == MyDB_PageType :: DirectoryPage) {
-		splitMe.append(getINRecord());
-		newSmallerPage.append(getINRecord());
+	if (curPageType == MyDB_PageType :: DirectoryPage) {
+		splitMe.setType(MyDB_PageType :: DirectoryPage);
+		newSmallerPage.setType(MyDB_PageType :: DirectoryPage);
 	}
 	
 	MyDB_RecordIteratorPtr iterateToMe = tempLargerPage.getIterator(tempRec);
@@ -159,16 +159,12 @@ MyDB_INRecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter spli
 }
 
 MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: append (int whichPage, MyDB_RecordPtr appendMe) {
-	// cout << whichPage << ", " << (*this)[whichPage].getType() << endl;
 	MyDB_PageReaderWriter curPageNode = (*this)[whichPage];
 	if (curPageNode.getType() == MyDB_PageType :: RegularPage) {
 		// reach leaf page, append appendMe
 		if (!curPageNode.append(appendMe)) {
 			// leaf page is full, need to split
-			// cout << whichPage << " start split\n";
-			MyDB_INRecordPtr splitedInRecord = split(curPageNode, appendMe);
-			if (splitedInRecord) cout << "new ptr: " << splitedInRecord->getPtr() << endl;
-			// cout << "end split\n";
+			MyDB_RecordPtr splitedInRecord = split(curPageNode, appendMe);
 			return splitedInRecord;
 		}
 	} else {
@@ -184,12 +180,9 @@ MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: append (int whichPage, MyDB_RecordP
 			pageRecIter->getNext();
 			auto cmp = buildComparator(appendMe, iterateToMe);
 			if (cmp()) {
-				cout << "from " << whichPage << ", recursively append to " << iterateToMe->getPtr() << endl;
 				MyDB_RecordPtr appendedInRecord = append(iterateToMe->getPtr(), appendMe);
 				if (appendedInRecord != nullptr) {
-					// cout << whichPage << " start internal split\n";
-					MyDB_RecordPtr splitedInRecord = split(curPageNode, appendMe);
-					// cout << "end split\n";
+					MyDB_RecordPtr splitedInRecord = split(curPageNode, appendedInRecord);
 					return splitedInRecord;
 				}
 			}
@@ -206,7 +199,9 @@ void MyDB_BPlusTreeReaderWriter :: printTree () {
 	// printNode(rootLocation, 0);
 	vector<vector<vector<int>>> v;
 	printTreeLevel(v, 0, rootLocation);
+	int curLevel = 0;
 	for (auto v1 : v) {
+		cout << "cur level: " << curLevel << " ";
 		for (auto v2 : v1) {
 			cout << "[";
 			for (auto att : v2) {
@@ -214,15 +209,19 @@ void MyDB_BPlusTreeReaderWriter :: printTree () {
 			}
 			cout << "], ";
 		}
+		curLevel++;
 		cout << endl;
 	}
+	cout << endl;
 }
 
 void MyDB_BPlusTreeReaderWriter :: printTreeLevel(vector<vector<vector<int>>>& v, int level, int cur) {
 	if (v.size() == level) v.push_back(vector<vector<int>>());
 	if (v.size() < level) return ;
-	if (cur > getTable()->lastPage()) return ;
+	// if (cur > getTable()->lastPage()) return ;
 	MyDB_PageReaderWriter curPage = (*this)[cur];
+	MyDB_INRecordPtr lhs = getINRecord(), rhs = getINRecord();
+	curPage.sortInPlace(buildComparator(lhs, rhs), lhs, rhs);
 	if (curPage.getType() == RegularPage) {
 		MyDB_RecordPtr tempRec = getEmptyRecord();
 		MyDB_RecordIteratorPtr iterateToMe = curPage.getIterator(tempRec);
@@ -235,9 +234,11 @@ void MyDB_BPlusTreeReaderWriter :: printTreeLevel(vector<vector<vector<int>>>& v
 	} else {
 		MyDB_INRecordPtr tempRec = getINRecord();
 		MyDB_RecordIteratorPtr iterateToMe = curPage.getIterator(tempRec);
+		v[level].push_back(vector<int>());
 		while (iterateToMe->hasNext()) {
 			iterateToMe->getNext();
-			v[level].push_back(vector<int>({cur}));
+			v[level][v[level].size() - 1].push_back(cur);
+			// cout << "cur page: " << cur << " to " << tempRec->getPtr() << endl;
 			printTreeLevel(v, level + 1, tempRec->getPtr());
 		}
 	}
