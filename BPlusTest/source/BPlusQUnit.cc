@@ -48,22 +48,21 @@ int main (int argc, char *argv[]) {
 	switch (start) {
 	case 1:
 	{
-		cout << "TEST 1... creating tree for small table, on suppkey " << flush;
+		cout << "TEST 4... creating tree for large table, on comment " << flush;
 		MyDB_BufferManagerPtr myMgr = make_shared <MyDB_BufferManager> (1024, 128, "tempFile");
-		MyDB_BPlusTreeReaderWriter supplierTable ("nationkey", myTable, myMgr);
-		supplierTable.loadFromTextFile ("custom_supplier.tbl");
+		MyDB_BPlusTreeReaderWriter supplierTable ("comment", myTable, myMgr);
+		supplierTable.loadFromTextFile ("supplierBig.tbl");
 
-		int recordNum = 14;
+		// there should be 320000 records
 		MyDB_RecordPtr temp = supplierTable.getEmptyRecord ();
 		MyDB_RecordIteratorAltPtr myIter = supplierTable.getIteratorAlt ();
 
 		int counter = 0;
 		while (myIter->advance ()) {
-			myIter->getCurrent (temp);
-			counter++;
+				myIter->getCurrent (temp);
+				counter++;
 		}
-		cout << counter << endl;
-		bool result = (counter == recordNum);
+		bool result = (counter == 320000);
 		if (result)
 			cout << "\tTEST PASSED\n";
 		else

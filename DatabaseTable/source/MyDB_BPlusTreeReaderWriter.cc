@@ -83,7 +83,7 @@ void MyDB_BPlusTreeReaderWriter :: append (MyDB_RecordPtr appendMe) {
 			rootLocation = getTable()->getRootLocation();
 		}
 	}
-	printTree();
+	// printTree();
 }
 
 MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter splitMe, MyDB_RecordPtr andMe) {
@@ -137,6 +137,7 @@ MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: split (MyDB_PageReaderWriter splitM
 	if (curPageType == MyDB_PageType :: DirectoryPage) {
 		splitMe.setType(MyDB_PageType :: DirectoryPage);
 		newSmallerPage.setType(MyDB_PageType :: DirectoryPage);
+		newSmallerPage.append(getINRecord());
 	}
 	
 	MyDB_RecordIteratorPtr iterateToMe = tempLargerPage.getIterator(tempRec);
@@ -162,6 +163,7 @@ MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: append (int whichPage, MyDB_RecordP
 	MyDB_PageReaderWriter curPageNode = (*this)[whichPage];
 	if (curPageNode.getType() == MyDB_PageType :: RegularPage) {
 		// reach leaf page, append appendMe
+		// cout << "append to " << whichPage << endl;
 		if (!curPageNode.append(appendMe)) {
 			// leaf page is full, need to split
 			MyDB_RecordPtr splitedInRecord = split(curPageNode, appendMe);
@@ -180,14 +182,16 @@ MyDB_RecordPtr MyDB_BPlusTreeReaderWriter :: append (int whichPage, MyDB_RecordP
 			pageRecIter->getNext();
 			auto cmp = buildComparator(appendMe, iterateToMe);
 			if (cmp()) {
+				// cout << "from " << whichPage << " to " << iterateToMe->getPtr() << endl; 
 				MyDB_RecordPtr appendedInRecord = append(iterateToMe->getPtr(), appendMe);
 				if (appendedInRecord != nullptr) {
 					MyDB_RecordPtr splitedInRecord = split(curPageNode, appendedInRecord);
 					return splitedInRecord;
 				}
-				break;
+				return nullptr;
 			}
 		}
+		// cout << "next page not found\n";
 	}
 	return nullptr;
 }
