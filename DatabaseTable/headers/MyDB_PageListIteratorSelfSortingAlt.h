@@ -53,18 +53,16 @@ public:
 	MyDB_PageListIteratorSelfSortingAlt (vector <MyDB_PageReaderWriter> &forUsIn, MyDB_RecordPtr lhsIn, 
 		MyDB_RecordPtr rhsIn, function <bool ()> comparatorIn, MyDB_RecordPtr myRecIn, function <bool ()> lowComparatorIn, 
 		function <bool ()> highComparatorIn, bool sortOrNotIn) {
-
 			// just remember all of the parameters
 			lhs = lhsIn;
 			rhs = rhsIn;
 			forUs = forUsIn;
-			comparator = comparatorIn;				
+			comparator = comparatorIn;
 			lowComparator = lowComparatorIn;
 			highComparator = highComparatorIn;
 			myRec = myRecIn;
 			curPage = 0;
 			sortOrNot = sortOrNotIn;
-
 			// set up the first iterator, and we are ready to go!!
 			if (sortOrNot)
 				forUs[curPage].sortInPlace (comparator, lhs, rhs);	

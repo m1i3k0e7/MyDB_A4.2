@@ -20,7 +20,7 @@
 
 int main (int argc, char *argv[]) {
 
-	int start = 5;
+	int start = 1;
 	if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
 		start = argv[1][0] - '0';
 	}
@@ -88,6 +88,7 @@ int main (int argc, char *argv[]) {
 				counter++;
 		}
 		bool result = (counter == 10000);
+		cout << counter << endl;
 		if (result)
 			cout << "\tTEST PASSED\n";
 		else
@@ -112,6 +113,7 @@ int main (int argc, char *argv[]) {
 				counter++;
 		}
 		bool result = (counter == 10000);
+		cout << counter << endl;
 		if (result)
 			cout << "\tTEST PASSED\n";
 		else
@@ -135,6 +137,7 @@ int main (int argc, char *argv[]) {
 				myIter->getCurrent (temp);
 				counter++;
 		}
+		cout << counter << endl;
 		bool result = (counter == 320000);
 		if (result)
 			cout << "\tTEST PASSED\n";
@@ -170,7 +173,9 @@ int main (int argc, char *argv[]) {
 			if (temp->getAtt (0)->toInt () == 4171)
 				foundIt = true;
        	}
-		bool result = foundIt && (counter = 4192);
+		cout << foundIt << endl;
+		cout << counter << endl;
+		bool result = foundIt && (counter == 4192);
 		if (result)
 			cout << "\tTEST PASSED\n";
 		else
@@ -196,19 +201,20 @@ int main (int argc, char *argv[]) {
 
 		MyDB_RecordIteratorAltPtr myIter = supplierTable.getSortedRangeIteratorAlt (low, high);
 		bool res = true;
-                while (myIter->advance ()) {
-                        myIter->getCurrent (temp);
-                        counter++;
+		while (myIter->advance ()) {
+			myIter->getCurrent (temp);
+			counter++;
 			if (counter != temp->getAtt (0)->toInt ()) {
 				res = false;
-				cout << "Found key of " << temp->getAtt (0)->toInt () << ", expected " << counter << "\n";
+				// cout << "Found key of " << temp->getAtt (0)->toInt () << ", expected " << counter << "\n";
 			}
-                }
+		}
+		cout << res << endl << counter << endl;
 		if (res && (counter == 10000))
 			cout << "\tTEST PASSED\n";
 		else
 			cout << "\tTEST FAILED\n";
-                QUNIT_IS_TRUE (res && (counter == 10000));
+		QUNIT_IS_TRUE (res && (counter == 10000));
 	}
 	FALLTHROUGH_INTENDED;
 	case 7:
@@ -239,6 +245,7 @@ int main (int argc, char *argv[]) {
 				}
 			}
 		}
+		cout << res << endl << counter << endl;
 		if (res && (counter == 100))
 			cout << "\tTEST PASSED\n";
 		else

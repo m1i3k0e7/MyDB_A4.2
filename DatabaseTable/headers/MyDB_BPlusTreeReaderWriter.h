@@ -13,6 +13,7 @@
 #include "MyDB_RecordIteratorAlt.h"
 #include "MyDB_Table.h"
 #include "MyDB_TableReaderWriter.h"
+#include <unordered_set>
 
 // create a smart pointer for the catalog
 using namespace std;
@@ -88,6 +89,7 @@ private:
 	// the number of the attribute that we are ordering on, in the data records
 	int whichAttIsOrdering;
 
+	int levelNum;
 };
 
 #endif
